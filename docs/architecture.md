@@ -99,8 +99,9 @@ An entry is a single memory item within a room. It is the atomic unit of memory.
 Every entry should have:
 - **Type** — what kind of information it represents (see below)
 - **Content** — the actual information, written in clear, direct language
-- **Created date** — when the entry was first written
-- **Status** — `active`, `deprecated`, or `under_review`
+- **`created_at`** — when the entry was first written
+- **`status`** — `draft`, `active`, `under_review`, or `deprecated`
+- **`verified_at`** (optional) — when the entry was last confirmed accurate
 
 One entry, one rule. If an entry requires two distinct headings to organize its content, it is likely two entries.
 
@@ -116,17 +117,18 @@ One entry, one rule. If an entry requires two distinct headings to organize its 
 
 Type determines how an agent treats the entry during retrieval. An agent must not override an `invariant` without explicit human instruction. A `note` may be deprioritized when context space is constrained.
 
-When the type is not obvious from context, tag it explicitly in the entry content:
+**Finer-grained labels.** The five types above are the primary taxonomy. Within an entry's content, a secondary label may clarify intent when useful:
 
 ```
-[type: architecture-rule]
-[type: component-contract]
-[type: anti-pattern]
-[type: code-convention]
-[type: reusable-pattern]
-[type: project-decision]
-[type: migration-note]
+[label: architecture-rule]    # usually an invariant or decision
+[label: component-contract]   # usually a decision
+[label: anti-pattern]         # usually an invariant ("must not")
+[label: code-convention]      # usually a pattern
+[label: reusable-pattern]     # usually a pattern
+[label: migration-note]       # usually a note or decision
 ```
+
+Labels are optional and do not replace the primary type. Retrieval and weighting are driven by the primary type; labels exist for human clarity.
 
 ### Hierarchy Summary
 
@@ -191,7 +193,7 @@ Entries marked `deprecated` are not surfaced unless explicitly requested.
 1. Query the project wing for project-specific rules.
 2. Query the shared wing for general knowledge.
 3. Merge results. Project rules override shared rules only when explicitly marked.
-4. If memory is unavailable, fall back to docs/architecture.md, then README.md, then workspace search.
+4. If the memory backend is unavailable, fall back to in-repo architecture docs, then README, then workspace search.
 ```
 
 ---
@@ -205,8 +207,9 @@ A project entry that simply contradicts a shared rule without explanation should
 **Example of an explicit override:**
 
 ```
-[type: local-override]
-STATUS: active
+type: decision
+label: local-override
+status: active
 
 This project does not follow the shared `ros2/lifecycle` activation sequence
 because the hardware driver requires a custom initialization step before
@@ -239,7 +242,7 @@ The test: *if this knowledge were lost tomorrow, would we reconstruct it and wri
 Before writing a new entry, search the target wing and room for semantically similar content.
 
 - If an existing entry covers the same information: **enrich** the existing entry rather than creating a new one.
-- If the new entry supersedes an older one: mark the old entry `STATUS: obsolete` or remove it.
+- If the new entry supersedes an older one: mark the old entry `status: deprecated` with a reference to its replacement.
 - Never create two entries with the same core rule in different phrasings.
 - When enriching an existing entry, preserve its original rule and extend it — do not rewrite from scratch.
 
@@ -257,16 +260,16 @@ These thresholds are a refinement on top of disciplined writing — not a replac
 
 ### Freshness metadata
 
-For entries that may evolve, include a status header:
+For entries that may evolve, include a metadata header:
 
 ```
-STATUS: active
-CREATED: YYYY-MM-DD
-REVISED: YYYY-MM-DD   (optional)
-VERSION: N            (optional)
+status: active
+created_at: YYYY-MM-DD
+verified_at: YYYY-MM-DD   (optional)
+version: N                (optional)
 ```
 
-Mark entries as `STATUS: review-needed` when the surrounding codebase has changed significantly but the entry has not been reviewed. Stale memory is worse than no memory.
+Set `status: under_review` when the surrounding codebase has changed significantly but the entry has not been re-verified. Stale memory is worse than no memory.
 
 ### Cross-references
 
@@ -287,10 +290,10 @@ Memory unavailability must never block a task.
 When memory tools are not accessible, agents must continue with local sources — not halt, not error, not ask for intervention. Design your instruction files so the fallback chain is explicit:
 
 ```
-memory tools → docs/architecture.md → README.md → workspace search
+memory backend → in-repo architecture docs → README → workspace search
 ```
 
-The agent that refuses to work because MemPalace is down has turned memory into a single point of failure. That is a design defect, not a safety measure.
+An agent that refuses to work because its memory backend is down has turned memory into a single point of failure. That is a design defect, not a safety measure.
 
 ---
 
@@ -311,9 +314,10 @@ A team building `lifecore_ros2` sets up:
 
 - Wing `lifecore_ros2`, room `architecture`:
   ```
-  [type: architecture-rule]
-  STATUS: active
-  CREATED: 2025-03-01
+  type: invariant
+  label: architecture-rule
+  status: active
+  created_at: 2025-03-01
 
   Topic components must gate all message processing and publication on the node's
   activation state. Subscribers must check node state before forwarding messages.
@@ -326,9 +330,10 @@ A team building `lifecore_ros2` sets up:
 
 - Wing `ros2`, room `lifecycle`:
   ```
-  [type: shared-knowledge]
-  STATUS: active
-  CREATED: 2025-01-15
+  type: decision
+  label: shared-knowledge
+  status: active
+  created_at: 2025-01-15
 
   ROS 2 lifecycle nodes follow a standard state machine: Unconfigured → Inactive →
   Active → Finalized. Transitions are triggered by configure(), activate(), deactivate(),
