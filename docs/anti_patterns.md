@@ -1,87 +1,87 @@
 # Anti-Patterns in Memory Engineering
 
-This document describes common failure modes in AI memory design. Recognizing these patterns early prevents the gradual decay of memory quality that makes agents unreliable.
+This document names common ways memory systems become unreliable over time.
 
 ---
 
-## Flat Memory
+## Flat memory
 
-**Description:** All entries are stored at the same level without wing or room structure. Memory is a list.
+**Description:** everything is stored at the same level, with no wing or room structure.
 
-**Why it fails:** Retrieval has no way to scope or prioritize. As volume grows, every retrieval returns too much noise or too little signal. There is no way to mark something as a constraint versus a casual observation.
+**Why it fails:** useful signal gets buried in undifferentiated context.
 
-**Fix:** Define wings based on domains, rooms based on sub-topics, and assign types to every entry before storing it.
-
----
-
-## Shadow Memory
-
-**Description:** An agent is given instructions in a system prompt or conversation that contradict or override entries in persistent memory, without updating persistent memory.
-
-**Why it fails:** The next session starts fresh from persistent memory. The override is gone. The agent behaves as if the override never happened. Over time, persistent memory and actual system behavior diverge.
-
-**Fix:** Any instruction that should survive a session must be written to persistent memory. System prompts should reference memory, not replace it.
+**Fix:** separate memory by wing, organize it by room, and assign a clear type to each durable entry.
 
 ---
 
-## Orphaned Entries
+## Shadow memory
 
-**Description:** Entries exist in memory for concepts or components that no longer exist in the system.
+**Description:** prompts or session instructions contradict persistent memory, but persistent memory is never updated.
 
-**Why it fails:** Agents draw on orphaned entries as if they are current. They make decisions based on constraints for systems that were removed.
+**Why it fails:** the next session starts from stale persistent memory again.
 
-**Fix:** When a component or subsystem is removed or significantly refactored, audit the relevant wing and deprecate all entries that no longer apply.
-
----
-
-## Vague Invariants
-
-**Description:** Invariants are written as general preferences rather than specific constraints.
-
-**Example of a vague invariant:** "Prefer clean code."
-
-**Why it fails:** The agent cannot operationalize vague invariants. They provide no actionable guidance and crowd out useful entries.
-
-**Fix:** Invariants should be specific, verifiable, and actionable. A good invariant specifies exactly what must or must not happen, in what context, and why (if not obvious).
-
-**Example of a specific invariant:** "All ROS 2 nodes must call `rclcpp::shutdown()` before the process exits. Do not suppress this call even in error paths."
+**Fix:** anything that must survive a session should be written to persistent memory.
 
 ---
 
-## Untimed Notes
+## Orphaned entries
 
-**Description:** Notes are written without creation or verification timestamps.
+**Description:** entries remain for systems or assumptions that no longer exist.
 
-**Why it fails:** Without dates, there is no way to detect drift. An untimed note is equally likely to be from last week or two years ago.
+**Why it fails:** the agent keeps applying rules for a reality that is already gone.
 
-**Fix:** Every entry should carry `created_at` and `verified_at` metadata. Even if the backend does not enforce this, include it in the entry body.
-
----
-
-## Memory Hoarding
-
-**Description:** Entries are never deprecated or removed. Memory only grows.
-
-**Why it fails:** Context pressure increases. Retrieval returns more and more entries, many of which are outdated. The ratio of useful to useless entries declines.
-
-**Fix:** Deprecate entries as part of maintenance. Deprecated entries can be retained for traceability but should not appear in standard retrieval.
+**Fix:** audit the relevant wing when a component is removed or heavily refactored.
 
 ---
 
-## Implicit Cross-Wing Dependencies
+## Vague invariants
 
-**Description:** An entry in one wing implicitly depends on a constraint defined in another wing, but no reference exists between them.
+**Description:** invariants are written as preferences instead of operational constraints.
 
-**Why it fails:** When the constraint in the source wing changes, the dependent entry is not updated. The dependency is invisible.
+**Bad example:** "Prefer clean code."
 
-**Fix:** Make cross-wing dependencies explicit. If an entry in `ros2/nodes` depends on a constraint in `architecture/decisions`, add a reference. When the referenced entry changes, dependent entries can be reviewed.
+**Why it fails:** the agent cannot act on vague advice.
+
+**Fix:** write invariants as clear, testable statements.
+
+**Better example:** "All ROS 2 nodes must call `rclcpp::shutdown()` before process exit, including error paths."
 
 ---
 
-## Agent-Authored Invariants Without Review
+## Untimed notes
 
-**Description:** An agent is allowed to create or modify `invariant`-type entries without human approval.
+**Description:** entries are written without timestamps.
 
-**Why it fails:** Invariants constrain the agent's own behavior. Allowing agents to self-modify constraints creates a feedback loop where the agent can reduce its own constraints over time.
+**Why it fails:** reviewers cannot tell whether an entry is fresh or ancient.
 
-**Fix:** Invariant and decision entries should require human review before becoming `active`. Agents may draft entries, but a human should approve them before they enter the retrieval system with full weight.
+**Fix:** durable entries should include `created_at`, and entries that may drift should usually include `verified_at`.
+
+---
+
+## Memory hoarding
+
+**Description:** memory only grows. Nothing gets deprecated or reviewed.
+
+**Why it fails:** retrieval gets more expensive, more stale, and less trustworthy.
+
+**Fix:** deprecate obsolete entries and make maintenance part of the normal workflow.
+
+---
+
+## Implicit cross-wing dependencies
+
+**Description:** one entry depends on another wing's rule, but that dependency is never referenced.
+
+**Why it fails:** the dependent entry will not be reviewed when the source rule changes.
+
+**Fix:** cross-reference shared rules instead of copying them or depending on them silently.
+
+---
+
+## Agent-authored invariants without review
+
+**Description:** an agent is allowed to activate its own `invariant` entries without human approval.
+
+**Why it fails:** the agent can gradually reshape its own constraints.
+
+**Fix:** agents may draft invariants and decisions, but a human should approve them before they become `active`.

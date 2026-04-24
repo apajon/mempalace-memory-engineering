@@ -1,214 +1,195 @@
 # Semantic Deduplication and Memory Drift Control
 
-Memory accumulates redundancy and drift over time. This guide explains how to detect, classify, and resolve both — before writing new entries and as part of ongoing maintenance.
-
-Deduplication is not a cleanup task. It is a design discipline. An agent that retrieves two conflicting entries covering the same constraint cannot determine which is authoritative. The result is inconsistent behavior that looks like a model problem but is a memory problem.
+Memory becomes noisy in two common ways: the same idea gets recorded more than once, and old entries stop matching reality.
 
 ---
 
-## 1. Why Deduplication Matters
+## 1. Why deduplication matters
 
-Every duplicate entry increases the cost of retrieval and reduces its reliability:
+Deduplication is not just cleanup. It keeps memory trustworthy.
 
-- **Ambiguity during retrieval.** When two entries address the same concept with different wording or contradictory content, the agent has no principled way to resolve the conflict. It may follow the wrong one, blend both incorrectly, or surface the contradiction to the user without resolution.
-- **Context window pressure.** Retrieving near-duplicate entries wastes space that should go to distinct, complementary context.
-- **Silent drift amplification.** When the same fact exists in three entries, updating one without updating the others creates a three-way split in authority. One entry gets corrected; two continue to mislead.
-- **Maintenance cost multiplier.** Every time a constraint changes, the number of entries requiring update scales with the degree of duplication.
+Duplicate or overlapping entries create:
 
-A memory system with well-controlled deduplication retrieves fewer entries, with higher signal per entry, and requires less maintenance per change.
+- ambiguity during retrieval
+- wasted context space
+- drift between copies
+- higher maintenance cost
+
+The goal is not fewer entries for the sake of neatness. The goal is better signal per entry.
 
 ---
 
-## 2. What Counts as Duplication
+## 2. What counts as duplication
 
-Duplication is not only exact repetition. It occurs in several forms:
+Duplication is not limited to copy-paste.
 
 | Form | Description |
 |------|-------------|
-| **Lexical duplicate** | Same content, same type, different wording |
-| **Semantic duplicate** | Different wording, but the constraint or fact is the same |
-| **Partial overlap** | One entry is a strict subset of another |
-| **Scattered accumulation** | The same pattern is recorded independently in multiple rooms without cross-reference |
-| **Re-recorded decisions** | A decision that was already active was written again after being forgotten |
+| **Lexical duplicate** | Same idea, almost the same wording |
+| **Semantic duplicate** | Same rule or fact expressed differently |
+| **Partial overlap** | One entry is mostly a subset of another |
+| **Scattered accumulation** | The same guidance appears in several rooms |
+| **Re-recorded decision** | A decision is written again instead of updated |
 
-Semantic duplication is the hardest to catch. Two entries like "Nodes must not block callbacks" and "Blocking inside a ROS 2 callback is not permitted" express the same invariant and should be merged — even if their phrasing differs entirely.
+Example:
 
-What does **not** count as duplication is addressed in section 5.
+- "Nodes must not block callbacks"
+- "Blocking inside a ROS 2 callback is not permitted"
+
+These should usually be treated as one invariant, not two.
 
 ---
 
-## 3. Wing and Room Scoped Comparison
+## 3. Compare within the right scope
 
-Deduplication should be performed within a defined scope. Comparing all entries globally is impractical and can lead to false positives — entries that share surface similarity but operate in different domains.
+Start with the smallest relevant scope.
 
-### Start within the room
+### Start with the room
 
-The most common source of duplication is within a single room. Before writing a new entry, compare against all existing entries in the same room.
+Most duplicates appear inside the same room.
 
 ### Expand to the wing when needed
 
-Cross-room duplication within a wing occurs when the same pattern is independently discovered or recorded in multiple sub-topics. After a batch of new entries, scan across rooms within the active wing.
+If the same topic appears in neighboring rooms, compare there next.
 
-### Handle project and shared wings separately
+### Treat project and shared wings separately
 
-Wings typically fall into two categories:
+- **Project wings** hold local knowledge
+- **Shared wings** hold reusable knowledge
 
-- **Project wings** — Scoped to a specific project (e.g., `lifecore_ros2`, `myapp`). Entries here reflect decisions made for that project.
-- **Shared wings** — Reusable conventions applicable across projects (e.g., `ros2`, `react`).
+If a project wing duplicates a shared rule, both copies need maintenance and will drift over time.
 
-Duplication *across* these two categories is particularly risky. If a constraint that belongs in a shared wing is also recorded in a project wing, any update to one will not automatically propagate to the other. The entries drift apart. When an agent loads both wings, it may apply the wrong version for the context it is in.
-
-**Rule:** If an entry in a project wing duplicates a constraint already in a shared wing, deprecate the project-wing copy and reference the shared-wing entry. Only keep a project-wing entry if it genuinely overrides or qualifies the shared constraint.
+**Rule:** if a project entry duplicates a shared entry, deprecate the project copy and reference the shared one unless the project entry is a documented override.
 
 ---
 
-## 4. Suggested Similarity Thresholds
+## 4. Suggested similarity thresholds
 
-When using semantic similarity tools to compare candidate entries, the following ranges provide working guidance for how to act on results. These are **thresholds for judgment, not hard enforcement rules.** Context, entry type, and scope all affect the correct interpretation.
+If you use semantic similarity tooling, treat it as judgment support, not automation.
 
 | Similarity score | Interpretation | Default action |
-|-----------------|---------------|----------------|
-| **≥ 0.86** | Near-duplicate | Enrich the existing entry rather than creating a new one |
-| **0.55 – 0.85** | Related, possibly overlapping | Review manually; determine whether entries address distinct aspects |
-| **< 0.55** | Likely distinct | Create a new entry, but verify scope and type before proceeding |
+|------------------|----------------|----------------|
+| **>= 0.86** | Near-duplicate | Enrich the existing entry |
+| **0.55 - 0.85** | Related or possibly overlapping | Review manually |
+| **< 0.55** | Likely distinct | A new entry may be justified |
 
-A score at the boundary (e.g., 0.84 or 0.87) should be reviewed by a human before acting. Automated tooling that applies these thresholds should flag boundary cases rather than acting on them unilaterally.
-
-When no similarity tooling is available, the comparison is done by reading. The same thresholds apply conceptually — ask whether the entries would tell an agent the same thing in context.
+Boundary cases still need human review.
 
 ---
 
-## 5. Type-Aware Exceptions
+## 5. Type-aware exceptions
 
-The same underlying content expressed in two different entry types does not always constitute duplication.
+Similar content does not always mean duplicate memory.
 
-Consider a constraint like "All API endpoints must be versioned":
+The same topic may legitimately appear as:
 
-- An `invariant` entry expresses this as a non-negotiable rule that must never be violated.
-- A `decision` entry records the rationale and history behind the choice.
-- A `pattern` entry describes how to implement versioning correctly.
-- A `note` might document a specific exception or edge case.
+- an `invariant`
+- a `decision`
+- a `pattern`
+- a `note`
 
-All four can coexist. They serve different retrieval purposes. Merging them would collapse the retrieval hierarchy and lose the semantic weight attached to each type.
-
-**Type-aware check:** Before merging two entries that appear to cover the same topic, verify they are the same type. If they are not, ask whether each is performing a distinct role in the retrieval hierarchy. If yes, they should remain separate. If one is an informal copy of the other at the wrong type level, deprecate the weaker one.
+Before merging two similar entries, confirm that they are the same type and serving the same role.
 
 ---
 
-## 6. Enrich vs. Create
+## 6. Enrich versus create
 
-When comparison reveals that a closely related entry already exists, the default action is to **enrich the existing entry** rather than creating a new one.
+The default move is usually to **enrich** the existing entry.
 
-**Enrich when:**
-- The new content adds detail, context, or a rationale to an existing entry
-- The new content clarifies a boundary case not covered explicitly
-- The new content updates a fact that was previously incomplete
+### Enrich when
 
-**Create a new entry when:**
-- The new content addresses a genuinely distinct constraint or pattern
-- The new content belongs in a different room or wing from the existing entry
-- The existing entry is `deprecated` and the new content represents a clean replacement
+- the new content adds detail or rationale to the same rule
+- the new content clarifies a boundary case
+- the new content updates an incomplete entry
 
-When enriching, preserve the original `created_at` date. Update `verified_at` to reflect the revision. Note what was changed in a brief inline comment if the content shift is significant. Do not silently rewrite an entry in a way that obscures its history.
+### Create when
 
----
+- the rule or fact is genuinely distinct
+- the content belongs in a different room or wing
+- the existing entry is `deprecated` and the new content is a clean replacement
 
-## 7. Preserving Original Rules
+When enriching:
 
-Enrichment does not mean overwriting. When updating an existing entry:
-
-- **Do not weaken an invariant** without human approval. Softening "must not" to "should avoid" is a substantive modification, not a clarification — treat it as a supersession, subject to [`principles/rules.md § 6`](../principles/rules.md#6-when-to-mark-obsolete) and [`principles/invariants.md § I7`](../principles/invariants.md#i7--obsolete-memory-is-maintenance-debt).
-- **Do not expand the scope** of an entry beyond its original intent. If the original entry applies to one room and the new content applies more broadly, draft a separate entry rather than silently widening the existing one.
-- **Do not merge types.** If an invariant and a decision cover related content, enriching one with content from the other conflates their roles in the retrieval hierarchy.
-- **Reference supersession explicitly.** If the enrichment effectively replaces a key claim in the original, mark the old version's claim as superseded within the entry rather than silently erasing it.
-
-These constraints apply to agent-authored enrichments and human-authored ones equally.
+- keep the original `created_at`
+- update `verified_at` if appropriate
+- preserve the original rule
 
 ---
 
-## 8. Handling Obsolete Entries
+## 7. Preserve original rules when enriching
 
-An entry becomes obsolete when the system it describes no longer exists, the constraint it encodes has been removed, or the decision it records has been reversed.
+Enrichment should add clarity, not weaken the original meaning.
 
-Obsolete entries are **not deleted.** They are **deprecated with a reference to what replaced them or why they no longer apply.** This follows [`principles/rules.md § 6`](../principles/rules.md#6-when-to-mark-obsolete) and is non-negotiable.
+- do not weaken an invariant without approval
+- do not silently widen scope
+- do not merge types just to reduce entry count
+- do not erase superseded meaning invisibly
+
+If the rule changes in substance, that is usually a supersession event, not a simple enrichment.
+
+---
+
+## 8. Handling obsolete entries
+
+An entry becomes obsolete when:
+
+- the system it describes no longer exists
+- the constraint has been removed
+- the decision has been replaced
+
+Do not delete obsolete entries silently. Keep them with `status: deprecated` and explain what replaced them or why they no longer apply.
 
 ### Deprecation workflow
 
-1. Change status from `active` (or `under_review`) to `deprecated`.
-2. Add a `deprecated_at` date.
-3. Add a note in the entry body: what changed, and what the replacement entry is (if any).
-4. If no replacement exists, note the reason for deprecation explicitly.
+1. Change status from `active` or `under_review` to `deprecated`
+2. Add a `deprecated_at` date if your backend supports it
+3. Explain what changed and what replaced the entry, if anything
+4. Keep the deprecated entry out of default retrieval
 
-Deprecated entries are excluded from standard retrieval (see `docs/retrieval.md`). They remain available for audit and traceability.
-
-### Drift as a form of functional obsolescence
-
-An entry that has not drifted to `deprecated` but whose content no longer reflects the system is functionally obsolete. This is more dangerous than an explicitly deprecated entry because it participates in standard retrieval with full authority.
-
-Mark any entry whose accuracy you cannot confirm as `under_review`. Do not let uncertainty linger silently in an `active` entry.
+If accuracy is uncertain, use `under_review` until someone confirms it.
 
 ---
 
-## 9. Practical Workflow Before Writing Memory
+## 9. Practical workflow before writing memory
 
-Before creating any new memory entry, run this sequence:
+Before creating a new entry:
 
-1. **Identify the target wing and room.** Confirm which wing and room the new entry belongs in. Do not default to a project wing if the content belongs in a shared wing.
-
-2. **Search within that room first.** Look for entries covering the same topic. Read them, not just their titles.
-
-3. **Check adjacent rooms within the wing.** Scattered accumulation often spans rooms within the same wing.
-
-4. **Check the corresponding shared wing** (if a shared wing exists). If the same constraint is already in a shared wing, do not duplicate it in a project wing unless a genuine override is needed.
-
-5. **Apply the similarity judgment.** Score or assess conceptual overlap. Use the thresholds in section 4 as a starting frame, adjusted for type and scope.
-
-6. **Decide: enrich or create.** If enriching, follow the rules in sections 6 and 7. If creating, confirm the type is correct and metadata is complete.
-
-7. **Draft, do not activate.** New entries start with `status: draft`. Activation requires human approval, especially for `invariant` and `decision` entries (rule R5).
+1. identify the target wing and room
+2. search that room for overlap
+3. check nearby rooms in the same wing
+4. check the shared wing if relevant
+5. decide whether to enrich or create
+6. confirm type and metadata
+7. start new entries as `status: draft`
 
 ---
 
-## 10. Common Mistakes
+## 10. Common mistakes
 
-**Writing first, checking second.** The most common source of duplication is not malice — it is skipping the pre-write check. Once an entry is `active`, removing it requires explicit deprecation and creates a trace. Prevention is cheaper than remediation.
+**Writing first, searching second.**
 
-**Comparing titles instead of content.** Two entries with different slugs can be near-duplicates. Similarity comparison must be done on entry body content, not identifiers.
+**Comparing only titles.**
 
-**Merging types to reduce count.** Combining an invariant and a decision into a single entry to "reduce clutter" destroys the retrieval hierarchy. The agent can no longer distinguish a hard constraint from a considered choice. Keep types separate.
+**Merging across types.**
 
-**Updating one copy, forgetting others.** When the same constraint exists in multiple entries, a targeted update to one leaves the others stale. Before updating any entry, check for semantic duplicates that may need the same update.
+**Updating one copy and forgetting the others.**
 
-**Soft-deleting instead of deprecating.** Removing an entry without a deprecation trace eliminates the record of why the constraint existed. Future agents or engineers have no way to understand why the entry is missing or whether its removal was intentional.
+**Deleting instead of deprecating.**
 
-**Assuming cross-wing entries are independent.** A project-wing entry and a shared-wing entry covering the same constraint are not independent. They are competing authorities. If both exist, one should explicitly reference or supersede the other.
-
-**Treating the thresholds as automation triggers.** Similarity scores are signals for human judgment, not commands for automated action. A score of 0.87 means "review carefully before enriching," not "merge automatically."
+**Treating thresholds as automation rules.**
 
 ---
 
-## Checklist: Before Writing a New Entry
+## Checklist: before writing a new entry
 
-```
+```text
 [ ] Wing and room identified
 [ ] Room searched for existing entries on the same topic
-[ ] Adjacent rooms within the wing checked
-[ ] Corresponding shared wing checked (if applicable)
-[ ] Similarity assessed — enrich or create decision made
-[ ] If enriching: original rules and type preserved
-[ ] If creating: type confirmed, metadata complete (type, status: draft, created_at)
-[ ] No project-wing duplicate of a shared-wing entry introduced
-[ ] Entry will not be marked active without human approval
+[ ] Nearby rooms checked
+[ ] Shared wing checked when relevant
+[ ] Enrich-versus-create decision made
+[ ] Type confirmed
+[ ] Metadata complete
+[ ] New entry starts as draft
+[ ] No duplicate shared/project copy introduced
 ```
-
----
-
-## Summary
-
-| Process | Trigger | Outcome |
-|---------|---------|---------|
-| Pre-write check | Before every new entry | Duplication caught before it enters the system |
-| Room-level deduplication | After a batch of entries; monthly | Redundant entries enriched or deprecated |
-| Cross-wing audit | Before a new agent session; on significant change | Project vs. shared wing conflicts resolved |
-| Drift check | Regular schedule; pre-session | Stale entries flagged as `under_review` |
-| Supersession | Decision or invariant changes | Old entry deprecated with back-reference; new entry created |

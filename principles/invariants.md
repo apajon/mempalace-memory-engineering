@@ -1,168 +1,95 @@
 # Design Invariants
 
-This document states the non-negotiable design invariants of the memory model described in
-this repository. These are not agent behaviors and not authoring tips — they are properties
-the memory system itself must satisfy. If an invariant here is violated, the model stops
-being coherent.
+These are the non-negotiable properties of the memory model used in this repository. They are not style tips and not agent behaviors. They are the structural conditions that keep the model coherent.
 
-Everything in [principles/rules.md](rules.md) derives from these invariants. Structural
-definitions (wings, rooms, entries, retrieval order, scope) live in
-[docs/architecture.md](../docs/architecture.md). Deduplication semantics live in
-[docs/deduplication.md](../docs/deduplication.md).
-
-These invariants apply to the methodology as documented here. They are not claims about any
-specific implementation, tool, or deployment.
+See [principles/rules.md](rules.md) for the practical rules built on top of them.
 
 ---
 
 ## I1 — Memory is scoped before it is retrieved
 
-Every entry exists inside a wing and a room. Retrieval is defined relative to an active
-scope, not against a global pool.
+Every entry belongs to a wing and a room.
 
-**Why it is an invariant.** Without scope, a project-specific rule and a shared platform
-rule compete equally during retrieval. The agent has no principled way to choose. See
-[docs/architecture.md §5 Scope Separation](../docs/architecture.md#5-scope-separation) and
-[§6 Retrieval Model](../docs/architecture.md#6-retrieval-model).
+**Why this matters:** without scope, project and shared rules compete on equal footing.
 
-**What violation looks like.** A flat memory store with no wing boundary. A "retrieve
-everything relevant" query that crosses project and shared wings without the caller
-declaring which one is active.
+**What violation looks like:** a flat memory store or a retrieval request that searches everything without declaring active scope.
 
 ---
 
 ## I2 — Shared knowledge must not silently override project knowledge
 
-Project wings encode local reality. Shared wings encode reusable conventions. When both
-address the same topic, the project wing takes precedence — but only when that precedence
-is explicitly marked.
+Project wings represent local reality. Shared wings represent reusable conventions.
 
-**Why it is an invariant.** Silent override destroys trust in either layer. If a shared
-rule can quietly win, project rules are not reliable. If a project rule can quietly win,
-shared conventions drift per project.
+**Why this matters:** silent overrides destroy trust in both layers.
 
-**What violation looks like.** A retrieval implementation that merges both wings and picks
-the "best match" by similarity. A project entry that contradicts a shared entry without
-declaring itself a local override.
-
-See [docs/architecture.md §7 Conflict Handling](../docs/architecture.md#7-conflict-handling).
+**What violation looks like:** retrieval that picks the "best match" across project and shared wings with no explicit override rule.
 
 ---
 
 ## I3 — Project-specific overrides must be explicit
 
-A project entry that diverges from a shared entry must say so and state why. Implicit
-divergence is indistinguishable from drift.
+If a project entry diverges from a shared rule, it should say so and explain why.
 
-**Example of an explicit override:**
+**Why this matters:** implicit divergence looks exactly like drift.
 
-```
-type: decision
-label: local-override
-status: active
-
-This project does not follow the shared `ros2/lifecycle` activation sequence
-because the hardware driver requires a custom init step before activate().
-```
-
-**What violation looks like.** A project entry that restates a shared rule with a small
-change, no `local-override` marker, and no rationale. A reader cannot tell whether this is
-an intentional deviation, a stale copy, or a mistake.
+**What violation looks like:** a project entry that restates a shared rule with one small change and no explanation.
 
 ---
 
 ## I4 — Memory writes require prior memory reads
 
-Before writing a new entry, the existing entries in the target room — and, for shared
-concerns, the target shared wing — must be consulted. Writing without reading produces
-duplicates and contradictions.
+Before writing a new entry, check the target room first, and the shared wing if the topic may already live there.
 
-**Why it is an invariant.** Duplication is a retrieval failure, not a stylistic problem.
-Two entries that say nearly the same thing with different wording force the agent to
-reconcile them on every retrieval. See
-[docs/deduplication.md §1](../docs/deduplication.md#1-why-deduplication-matters) and
-[§3 Wing and Room Scoped Comparison](../docs/deduplication.md#3-wing-and-room-scoped-comparison).
+**Why this matters:** writing before reading is the fastest route to duplicates.
 
-**What violation looks like.** Creating an entry on a topic without first checking the
-room. A "write-first, search-later" workflow.
+**What violation looks like:** a workflow that creates entries first and searches later.
 
 ---
 
 ## I5 — Durable memory must be non-obvious, reusable, and likely to matter again
 
-An entry earns its place only if it meets all three:
+An entry earns durable storage only if it is:
 
-- **Non-obvious** — not trivially recoverable by reading the code or the public docs of the
-  framework.
-- **Reusable** — will apply to more than the single task that surfaced it.
-- **Likely to matter again** — the cost of forgetting it is real.
+- non-obvious
+- reusable
+- likely to matter again
 
-**Why it is an invariant.** Memory that fails any of the three pollutes retrieval. Obvious
-facts waste context. One-shot facts age into noise. Unlikely-to-recur facts occupy space
-that future signal needs.
+**Why this matters:** anything less turns into retrieval noise.
 
-**What violation looks like.** Session transcripts persisted as entries. Restated
-framework documentation. Notes about a single bug that is already fixed and will not
-recur.
-
-See [docs/architecture.md §8 Persistence Rules](../docs/architecture.md#8-persistence-rules).
+**What violation looks like:** session transcripts, restated framework docs, or one-off facts.
 
 ---
 
 ## I6 — Memory unavailability must not block development work
 
-The memory backend is an input, not a precondition. When it is unavailable, degraded, or
-uncertain, work continues through documented fallbacks.
+The memory backend is an input, not a precondition.
 
-**Why it is an invariant.** A memory system that can halt development is a liability.
-Agents and humans both depend on the ability to proceed with local sources (repo docs,
-README, code search) when the structured store is not reachable.
+**Why this matters:** otherwise memory becomes a single point of failure.
 
-**What violation looks like.** An agent that refuses to answer or edit because memory
-retrieval returned an error. A workflow that requires memory writes to succeed before a
-change is considered done.
-
-See [docs/architecture.md §9 Graceful Degradation](../docs/architecture.md#9-graceful-degradation).
+**What violation looks like:** an agent that refuses to continue because retrieval failed.
 
 ---
 
 ## I7 — Obsolete memory is maintenance debt
 
-An entry that no longer matches reality is worse than no entry. It actively misleads
-retrieval. Obsolescence must be marked, not ignored, and supersession must be explicit.
+An entry that no longer matches reality is worse than no entry.
 
-**Why it is an invariant.** The trust contract of memory is that what is retrieved is
-usable. A stale `active` entry breaks that contract. Silent deletion breaks traceability.
+**Why this matters:** a stale `active` entry breaks trust in the whole system.
 
-**What violation looks like.** Overwriting an entry to "fix" it without recording that a
-prior rule existed. Leaving superseded entries `active` alongside their replacements.
-Deleting an entry instead of marking it `deprecated`.
+**What violation looks like:** leaving superseded entries active, deleting old entries without a trace, or silently overwriting a rule.
 
 ---
 
 ## I8 — One entry contains one durable rule or fact
 
-An entry is atomic. If it needs two headings to organize its content, it is two entries.
-If it mixes a rule with an unrelated anti-pattern, it is two entries.
+Entries should stay atomic.
 
-**Why it is an invariant.** Atomicity is what makes entries referenceable, deprecatable,
-and enrichable. Compound entries cannot be cleanly superseded: deprecating them throws out
-still-valid content; editing them silently changes rules that other entries may
-cross-reference.
+**Why this matters:** atomic entries are easier to reference, review, supersede, and retrieve.
 
-**What violation looks like.** An entry titled "Lifecycle and message handling" that
-bundles an activation-state rule with a subscriber-queue pattern. Each deserves its own
-address.
+**What violation looks like:** one entry that mixes unrelated rules or patterns.
 
 ---
 
-## Scope of These Invariants
+## Scope of these invariants
 
-These invariants constrain the memory model. They are not claims about agent reasoning or
-natural language understanding. They assume a disciplined author — human or agent — that
-can decide whether a given piece of content qualifies for persistence, which wing it
-belongs in, and whether it duplicates existing content.
-
-When tooling enforces some of these invariants (for example, a write API that rejects
-entries without a `created_at` field), that is a convenience. The invariants hold whether
-or not tooling enforces them.
+These invariants constrain the memory model itself. Tooling may enforce some of them, but the methodology should still hold even when tooling does not.

@@ -1,78 +1,68 @@
 # Template: Memory Entry
 
-Standard templates for the most common kinds of memory entries. Copy the
-block you need, fill it in, and store it in the appropriate wing and room.
+This file provides standard templates for common durable memory entries.
 
-Conventions used throughout:
-
-- The **primary type** (`invariant`, `decision`, `pattern`, `note`,
-  `deprecated`) drives retrieval and weighting. See
-  [docs/architecture.md § Entry Types](../docs/architecture.md#entry-types).
-- The **label** is a finer-grained tag that clarifies intent for humans.
-  Labels do not replace the primary type.
-- Metadata fields follow the repository standard:
-  `type`, `status`, `created_at`, and optionally `verified_at`, `version`,
-  `supersedes`, `superseded_by`.
-- Status vocabulary: `draft`, `active`, `under_review`, `deprecated`.
-- Agents may only create entries with `status: draft`. Activation requires
-  human approval.
-
-Entry IDs should be lowercase, hyphen-separated, and descriptive enough to be
-recognizable without reading the full content (e.g. `no-blocking-callbacks`,
-`repository-layer-required`).
+Copy the block you need, fill it in, and store it in the right wing and room.
 
 ---
 
-## Shared Field Reference
+## Conventions used throughout
 
-| Field           | Required | Description                                                          |
-|-----------------|----------|----------------------------------------------------------------------|
-| `type`          | yes      | One of: `invariant`, `decision`, `pattern`, `note`, `deprecated`.    |
-| `label`         | no       | Finer-grained intent tag (see per-template examples below).          |
-| `status`        | yes      | One of: `draft`, `active`, `under_review`, `deprecated`.             |
-| `created_at`    | yes      | ISO 8601 date when the entry was first written.                      |
-| `verified_at`   | no       | ISO 8601 date when the entry was last confirmed accurate.            |
-| `version`       | no       | Integer, incremented when the rule itself changes.                   |
-| `supersedes`    | no       | ID of the entry this one replaces.                                   |
-| `superseded_by` | no       | ID of the entry that replaces this one (use when deprecating).       |
+- the **primary type** is one of `invariant`, `decision`, `pattern`, or `note`
+- the **status** is one of `draft`, `active`, `under_review`, or `deprecated`
+- a **label** can add precision for humans, but it does not replace the primary type
+- agents may draft entries, but activation requires human approval
+
+Entry IDs should be lowercase, hyphen-separated, and descriptive enough to recognize quickly.
+
+---
+
+## Shared field reference
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `type` | yes | `invariant`, `decision`, `pattern`, or `note` |
+| `label` | no | Human-readable secondary tag |
+| `status` | yes | `draft`, `active`, `under_review`, or `deprecated` |
+| `created_at` | yes | ISO 8601 date when the entry was first written |
+| `verified_at` | no | ISO 8601 date when the entry was last confirmed accurate |
+| `version` | no | Integer version if the rule itself evolves |
+| `supersedes` | no | ID of an older entry this one replaces |
+| `superseded_by` | no | ID of a newer entry that replaces this one |
 
 ---
 
 ## 1. architecture-rule
 
-A high-level, project-wide constraint on how the system is structured. Most
-architecture rules are modeled as `invariant` (must never be violated) or
-`decision` (deliberate structural choice with rationale).
+High-level structural guidance.
 
-**Typical location:** `<project_wing>/architecture`.
+**Typical location:** `<project_wing>/architecture`
 
-```
+```text
 ## <entry-id>
 
 type: invariant          # or: decision
 label: architecture-rule
-status: draft            # activate only after human approval
+status: draft
 created_at: YYYY-MM-DD
 verified_at: YYYY-MM-DD  # optional
 
-<State the rule as a single direct constraint. Use "must" / "must not".>
+<State the rule directly. Use must or must not when appropriate.>
 
-Rationale: <why this rule exists; what breaks if it is violated>
+Rationale: <why the rule exists and what breaks if it is ignored>
 
-[see: <wing>/<room>/<entry-id>]   # optional, for related or shared entries
+[see: <wing>/<room>/<entry-id>]   # optional
 ```
 
 ---
 
 ## 2. component-contract
 
-A guarantee or obligation between two components: inputs, outputs, ordering,
-error behavior, threading model. Component contracts are almost always
-`decision` entries — they encode a deliberate interface choice.
+A contract between components.
 
-**Typical location:** `<project_wing>/components` or `<project_wing>/contracts`.
+**Typical location:** `<project_wing>/components` or `<project_wing>/contracts`
 
-```
+```text
 ## <entry-id>
 
 type: decision
@@ -82,30 +72,26 @@ created_at: YYYY-MM-DD
 verified_at: YYYY-MM-DD  # optional
 
 Component: <name or path>
-Consumers: <list of callers or "any">
+Consumers: <callers or "any">
 
 Contract:
-- Inputs:  <preconditions, types, validation expectations>
-- Outputs: <postconditions, types, ordering guarantees>
-- Errors:  <how failures are signaled; what callers must handle>
-- Threading: <single-threaded / thread-safe / lock requirements>
+- Inputs: <preconditions and validation expectations>
+- Outputs: <postconditions and guarantees>
+- Errors: <how failures are signaled>
+- Threading: <threading or execution assumptions>
 
-Rationale: <why this contract shape; what would break if it changed>
-
-[see: <wing>/<room>/<entry-id>]   # optional
+Rationale: <why this contract shape matters>
 ```
 
 ---
 
 ## 3. anti-pattern
 
-A specific mistake that has been observed (or is highly likely) and must be
-avoided. Anti-patterns are modeled as `invariant` entries (must not happen),
-tagged with a label so they can be surfaced distinctly from positive rules.
+A specific mistake that should not recur.
 
-**Typical location:** `<project_wing>/anti-patterns`.
+**Typical location:** `<project_wing>/anti-patterns`
 
-```
+```text
 ## <entry-id>
 
 type: invariant
@@ -116,24 +102,22 @@ verified_at: YYYY-MM-DD  # optional
 
 Do not: <precise description of the forbidden pattern>
 
-Observed impact: <incident, bug, or concrete failure that motivated this entry>
+Observed impact: <bug, failure, or incident that motivated this entry>
 
-Do instead: <the correct alternative, stated directly>
+Do instead: <the correct alternative>
 
-Rationale: <why the forbidden pattern fails; root cause>
+Rationale: <why the forbidden pattern fails>
 ```
 
 ---
 
 ## 4. code-convention
 
-A style, naming, or structural preference that should be applied consistently
-but does not rise to the level of an architectural constraint. Code
-conventions are `pattern` entries.
+A consistency rule that matters, but does not rise to the level of an architectural constraint.
 
-**Typical location:** `<project_wing>/conventions` or `<shared_wing>/conventions`.
+**Typical location:** `<project_wing>/conventions` or `<shared_wing>/conventions`
 
-```
+```text
 ## <entry-id>
 
 type: pattern
@@ -144,33 +128,31 @@ verified_at: YYYY-MM-DD  # optional
 
 Applies to: <file pattern, language, module, or component scope>
 
-Convention: <what to do, stated positively>
+Convention: <what to do>
 
-When to apply: <the scope in which this applies>
-When not to apply: <explicit exceptions, if any>
+When to apply: <scope>
+When not to apply: <exceptions>
 
-Rationale: <why this convention; what inconsistency it prevents>
+Rationale: <why this convention exists>
 ```
 
 ---
 
 ## 5. migration-note
 
-A record of a breaking change, deprecation, or upgrade path. Migration notes
-are usually `note` entries (informational) but can be `decision` entries when
-the migration path itself is a deliberate choice.
+A record of a breaking change, deprecation path, or upgrade strategy.
 
-**Typical location:** `<project_wing>/migration-notes`.
+**Typical location:** `<project_wing>/migration-notes`
 
-```
+```text
 ## <entry-id>
 
-type: note               # or: decision, when the migration path is a choice
+type: note               # or: decision if the migration path is itself a choice
 label: migration-note
 status: draft
 created_at: YYYY-MM-DD
 verified_at: YYYY-MM-DD  # optional
-version: 1               # optional; bump when the migration plan changes
+version: 1               # optional
 
 From: <old version, API, or schema>
 To:   <new version, API, or schema>
@@ -180,35 +162,31 @@ Migration steps:
 2. <step>
 3. <step>
 
-Compatibility window: <e.g. "90 days after release X.Y">
+Compatibility window: <timing>
 Rollback plan: <how to revert, or "not supported">
 
-Rationale: <why this migration is needed; what it unlocks or prevents>
+Rationale: <why the migration exists>
 
-supersedes: <entry-id>   # optional, if this migration replaces a previous plan
+supersedes: <entry-id>   # optional
 ```
 
 ---
 
 ## 6. incident-log
 
-One concrete incident that actually happened: symptoms, diagnosis, root cause,
-fix, and prevention. Incident-log entries are `note` entries — they are
-historical records, not constraints. Constraints derived from an incident
-belong in their own `invariant` or `anti-pattern` entry that references the
-incident.
+A record of one concrete incident.
 
-**Typical location:** `<project_wing>/incident-log`.
+**Typical location:** `<project_wing>/incident-log`
 
-```
+```text
 ## <entry-id>
 
 type: note
 label: incident-log
-status: active           # historical records are usually active immediately
-created_at: YYYY-MM-DD   # date the incident occurred
+status: draft
+created_at: YYYY-MM-DD
 
-Summary: <one-sentence description of the incident>
+Summary: <one-sentence description>
 
 Symptoms:
 - <observable symptom>
@@ -218,76 +196,59 @@ Timeline:
 - <timestamp> — <event>
 - <timestamp> — <event>
 
-Root cause: <precise cause, not just the trigger>
+Root cause: <precise cause>
 
-Fix: <what was changed to resolve the incident>
+Fix: <what resolved the issue>
 
 Prevention:
-- <what was added: test, alert, invariant, anti-pattern entry, etc.>
-
-[see: <wing>/anti-patterns/<entry-id>]  # optional, if an anti-pattern was created
-[see: <wing>/failure-modes/<entry-id>]  # optional, if a failure mode was generalized
+- <test, alert, invariant, anti-pattern, or other follow-up>
 ```
+
+Historical records may eventually become `active`, but agent-authored entries should still start as `draft`.
 
 ---
 
 ## 7. failure-mode
 
-A generalized class of failure for a component or subsystem: what triggers it,
-how it manifests, and the recovery strategy. Failure modes are `note` or
-`decision` entries depending on whether they prescribe a recovery policy.
+A generalized class of failure: what triggers it, what it looks like, and how to recover.
 
-Unlike `incident-log` (one thing that happened), a failure mode generalizes
-across incidents and describes a class of risk.
+**Typical location:** `<project_wing>/failure-modes`
 
-**Typical location:** `<project_wing>/failure-modes`.
-
-```
+```text
 ## <entry-id>
 
-type: note               # or: decision, when the recovery strategy is prescriptive
+type: note               # or: decision if recovery policy is prescriptive
 label: failure-mode
 status: draft
 created_at: YYYY-MM-DD
 verified_at: YYYY-MM-DD  # optional
 
 Component: <name or subsystem>
-Failure class: <short descriptor, e.g. "message backlog", "partial write">
+Failure class: <short descriptor>
 
 Triggers:
-- <condition that can cause this failure>
-- <condition that can cause this failure>
+- <condition>
+- <condition>
 
 Symptoms:
-- <what the failure looks like from outside>
+- <what the failure looks like>
 
-Detection: <how this failure is currently detected; what signal exposes it>
+Detection: <how it is detected>
 
 Recovery strategy:
-- <steps or policy to recover>
+- <step or policy>
 
 Preventive measures:
-- <tests, invariants, or observability that reduce probability>
-
-[see: <wing>/incident-log/<entry-id>]   # optional, incidents that exemplify this class
-[see: <wing>/observability/<entry-id>]  # optional, signals that detect this class
+- <test, invariant, observability rule, or other control>
 ```
 
 ---
 
-## Entry Writing Guidelines
+## Entry writing guidelines
 
-- **One concept per entry.** If the entry needs two distinct headings to
-  organize its content, it is probably two entries.
-- **Entries are constraints, not documentation.** Write direct statements.
-  Avoid narrative prose.
-- **Avoid pronouns without referents.** "It must not do this" is not useful
-  without a clear subject and action.
-- **Keep entries reviewable in under two minutes.** If an entry is longer
-  than that, split it.
-- **`verified_at` tracks reviews, not edits.** A review that confirms "still
-  correct, no change needed" still bumps `verified_at`.
-- **Supersession is explicit.** When replacing an entry, set
-  `status: deprecated` on the old one and populate `superseded_by`. Silent
-  deletion is not permitted — see
-  [principles/rules.md § 6](../principles/rules.md#6-when-to-mark-obsolete).
+- one concept per entry
+- write direct statements
+- avoid unclear pronouns
+- keep entries short enough to review quickly
+- `verified_at` tracks review freshness, not just edits
+- when replacing an entry, mark the old one `deprecated` and fill in `superseded_by`

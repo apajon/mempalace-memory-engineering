@@ -1,106 +1,80 @@
 # MemPalace Memory Engineering — Copilot Instructions
 
-Guidelines for working in this repository. This is a **methodology and reference repo** for
-designing long-term memory in AI systems. The artifacts here are Markdown documents —
-principles, templates, examples, and docs. Changes have downstream impact on any agent
-that consumes these conventions.
+This repository is a methodology and reference repo for long-term memory design in AI systems. Most files here are Markdown documents, templates, and examples. Changes may affect downstream agents that rely on these conventions.
 
-See [README.md](../README.md) for project overview and core concepts.
+See [README.md](../README.md) for the overview and core concepts.
 
 ---
 
-## 1. Think Before Writing
+## 1. Think before writing
 
-**Don't assume. Surface ambiguity. Name the tradeoffs.**
+Do not assume scope or entry type.
 
-Before proposing or editing any content:
+Before proposing or editing content:
 
-- State which **wing**, **room**, and **entry type** the change targets. If uncertain, ask.
-- If multiple entry types could apply (e.g., `invariant` vs. `decision`), present the
-  distinction — don't pick silently.
-- If a simpler formulation exists, say so. Push back when warranted.
-- If the scope is unclear (global vs. wing-scoped), stop and surface the question.
-
----
-
-## 2. Minimum Viable Entry
-
-**Write the least content that fully captures the constraint. Nothing speculative.**
-
-- No content beyond what the task requires.
-- No "related thoughts" or loosely connected patterns appended to an entry.
-- No preemptive entries for constraints that haven't been established yet.
-- If an entry can be stated in 3 lines, don't write 10.
-
-Ask: *"Would a reviewer reading this entry know exactly what it enforces, and nothing more?"*
-If not, tighten it.
+- state which **wing**, **room**, and **entry type** the change targets
+- if more than one entry type could fit, explain the distinction instead of picking silently
+- prefer the simplest wording that still captures the constraint
+- if scope is unclear, stop and surface that ambiguity
 
 ---
 
-## 3. Surgical Edits
+## 2. Minimum viable entry
 
-**Touch only what you must. Preserve the structure around your changes.**
+Write the smallest amount of content that fully captures the rule.
+
+- no speculative content
+- no loosely related appendices
+- no preemptive entries for constraints that are not established yet
+- if an entry can be three lines long, do not make it ten
+
+---
+
+## 3. Surgical edits
+
+Touch only what the task requires.
 
 When editing existing docs or entries:
 
-- Don't reformat, re-word, or restructure sections you weren't asked to touch.
-- Match the existing style and terminology (e.g., `must`, `must not`, `should`).
-- If you notice a drift, inconsistency, or stale entry elsewhere, **mention it — don't fix it**
-  unless explicitly asked.
+- do not rewrite unrelated sections
+- match the repository's existing terminology such as `must`, `must not`, and `should`
+- if you notice another inconsistency, mention it rather than fixing it unless the task requires it
 
-When your changes create orphans:
-- Remove cross-references or links that YOUR changes made invalid.
-- Don't clean up pre-existing broken references unless asked.
+If your change invalidates a cross-reference, repair that reference. Do not clean up unrelated broken links opportunistically.
 
 ---
 
-## 4. Goal-Driven Authoring
+## 4. Goal-driven authoring
 
-**Every change should have a verifiable outcome.**
+Every change should lead to a checkable outcome.
 
-Transform tasks into checkable goals:
+Examples:
 
-- "Add an invariant" → "The entry states a specific constraint, scoped to a wing, with a
-  verifiable consequence of violation."
-- "Update a pattern" → "The updated entry does not contradict any invariant in the same wing."
-- "Deprecate a decision" → "The old entry is marked `deprecated`, references its replacement,
-  and is not surfaced by default retrieval."
+- adding an invariant means the entry states a clear constraint with a verifiable consequence of violation
+- updating a pattern means the updated text does not contradict active invariants in the same scope
+- deprecating a decision means the old entry is marked `deprecated`, references its replacement, and stays out of default retrieval
 
-For multi-step tasks, state a brief plan:
-
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-```
+For multi-step work, state a brief plan with one verification check per step.
 
 ---
 
-## Memory Engineering Conventions
+## Memory engineering conventions
 
-**These apply to all content in this repo.**
+- **Entry types:** `invariant` > `decision` > `pattern` > `note`
+- **Retrieval order:** invariants apply first
+- **Draft before activate:** proposed entries start as `status: draft`; no entry becomes `active` without explicit human approval
+- **Metadata is required:** every entry must include `type`, `status`, and `created_at`
+- **Supersession is explicit:** replaced entries are marked `deprecated` and reference their replacement
+- **Scope matters:** a wing-scoped invariant does not become global by accident
+- **No duplication:** check for existing coverage before drafting a new entry
 
-- **Entry types**: `invariant` > `decision` > `pattern` > `note`. See [README.md](../README.md#entry-types)
-  for type definitions.
-- **Retrieval order**: Invariants apply first. Lower-weight entries do not override them.
-  See [docs/retrieval.md](../docs/retrieval.md).
-- **Draft before activate**: Proposed entries start as `status: draft`. No entry becomes
-  `active` without explicit human approval. This is non-negotiable for `invariant` and
-  `decision` entries.
-- **Metadata is required**: Every entry must include `type`, `status`, and `created_at`.
-  Missing metadata is a defect, not an omission.
-- **Supersession is explicit**: Replaced entries are marked `deprecated` with a reference to
-  their replacement. Silent deletion is not permitted. See
-  [principles/rules.md § 6](../principles/rules.md#6-when-to-mark-obsolete) and
-  [principles/invariants.md § I7](../principles/invariants.md#i7--obsolete-memory-is-maintenance-debt).
-- **Scope invariants correctly**: A wing-scoped invariant does not apply globally. If a
-  constraint must apply across all wings, flag it for placement in a `global` wing.
-  See [principles/invariants.md § I1](../principles/invariants.md#i1--memory-is-scoped-before-it-is-retrieved).
-- **No duplication**: Before drafting a new entry, check for existing coverage. Propose an
-  update over a new entry if overlap exists. See
-  [principles/rules.md § 5](../principles/rules.md#5-when-to-enrich-instead-of-creating).
+See:
+
+- [README.md](../README.md#entry-types)
+- [docs/retrieval.md](../docs/retrieval.md)
+- [principles/rules.md](../principles/rules.md#6-when-to-mark-obsolete)
+- [principles/invariants.md](../principles/invariants.md#i7--obsolete-memory-is-maintenance-debt)
 
 ---
 
-**Accountability check:** Every changed line should trace to the user's request. Entries that
-conflict with an invariant must surface the conflict before proceeding. Ambiguity should be
-named, not resolved silently.
+**Accountability check:** every changed line should trace back to the task. If a proposed change conflicts with an invariant, surface the conflict instead of resolving it silently.

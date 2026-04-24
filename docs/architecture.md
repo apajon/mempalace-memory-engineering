@@ -1,366 +1,303 @@
 # Architecture: Wings, Rooms, and Entries
 
-This document describes a methodology for organizing long-term memory in AI-assisted engineering workflows. It is not an official MemPalace workflow or a mandatory standard — it is a structured approach that has proven practical when agents need to share persistent context across sessions and projects.
+This document describes a practical way to organize long-term memory in AI-assisted engineering workflows. It is not an official MemPalace workflow. It is a model that stays understandable as memory grows.
 
 ---
 
 ## 1. Purpose
 
-As AI-assisted engineering grows more complex, agents accumulate more context. Without deliberate structure, that context degrades. This document describes how to design memory so that agents consistently apply the right rules, without being re-explained every session.
+As agents take on more work, they accumulate more context. If that context is not structured, the right rule becomes harder to retrieve at the right time.
 
-The core idea: treat memory as an engineering artifact, not a pile of notes. Every entry gets a known location, a type, and a weight.
+The goal is simple: treat memory like an engineering artifact, not a pile of notes.
 
----
+Each entry should have:
 
-## 2. Problem: Why Flat Memory Fails
-
-When all entries exist at the same level, without hierarchy or taxonomy, several problems emerge as volume grows:
-
-- **Agents retrieve outdated entries alongside current ones.** A stale decision and an active one look identical during retrieval.
-- **Project-specific rules bleed into general knowledge.** Platform conventions get mixed with local overrides, and neither is trustworthy.
-- **The same fact accumulates in multiple phrasings.** Retrieval surfaces all of them. They don't always agree.
-- **Useful insights vanish into noise.** A well-written invariant disappears next to fifty session notes that should never have been stored.
-- **Context space is wasted.** Retrieved entries that don't belong crowd out the ones that do.
-
-Structured memory solves this by assigning every entry a location, a type, and a scope.
+- a clear scope
+- a clear subject
+- a clear type
+- a clear lifecycle status
 
 ---
 
-## 3. Design Goals
+## 2. Why flat memory fails
 
-A well-governed memory layer should satisfy these properties:
+When memory is one undifferentiated list:
 
-| Goal | What it means in practice |
-|------|--------------------------|
-| **Scoped** | Project knowledge and shared knowledge are separated. Retrieval stays within scope by default. |
-| **Retrievable** | Agents can find the right context in a predictable order. |
-| **Deduplicated** | The same rule does not exist in two places with different phrasings. |
-| **Durable** | Decisions persist beyond session boundaries and tool restarts. |
-| **Graceful** | Agents do not break when memory is unavailable. |
+- stale and current guidance look the same
+- shared knowledge bleeds into project rules
+- the same rule shows up in several phrasings
+- useful signal gets buried in noise
+- context space is wasted
 
-None of these require specialized tooling. They require discipline in how you write to and read from your memory store.
+Structured memory fixes this by giving every entry a clear place and role.
 
 ---
 
-## 4. Core Model
+## 3. Design goals
+
+| Goal | In practice |
+|------|-------------|
+| **Scoped** | Project and shared knowledge stay separate |
+| **Retrievable** | Agents gather context in a predictable order |
+| **Deduplicated** | The same rule does not appear in competing forms |
+| **Durable** | Important knowledge survives sessions and tool changes |
+| **Graceful** | Work continues if memory is unavailable |
+
+These outcomes require disciplined writing and retrieval, not specialized tooling.
+
+---
+
+## 4. Core model
 
 ### Wings
 
-A wing is the top-level namespace. It defines a domain of concern and a scoping boundary.
+A wing is the top-level scope boundary.
 
-An agent working within a wing loads memory from that wing by default. Cross-wing retrieval is explicit and deliberate — not automatic.
+Examples:
 
-**Examples:**
-- `lifecore_ros2` — a specific robotics project
-- `ros2` — general ROS 2 knowledge, reusable across projects
-- `myapp` — a web application project
-- `react` — shared React conventions
+- a specific project, like `lifecore_ros2`
+- shared technical knowledge, like `ros2` or `react`
 
-**Naming conventions:**
-- Lowercase identifiers, underscores for multi-word names
-- Short and domain-specific
-- A wing is not a tag. It is a boundary.
+Agents load the active wing by default. Cross-wing retrieval should be explicit.
+
+**Naming guidance:**
+
+- use lowercase names
+- use underscores for multi-word identifiers
+- keep names short and domain-specific
+- treat a wing as a scope boundary, not a tag
 
 ### Rooms
 
-A room is a category within a wing. Rooms make retrieval predictable and keep entries searchable by subject.
+A room is a subject area inside a wing.
 
-**Examples within a `ros2` wing:**
-- `ros2/lifecycle` — lifecycle state machine semantics
-- `ros2/nodes` — per-node constraints and patterns
-- `ros2/anti-patterns` — confirmed mistakes to avoid
+**Examples inside `ros2`:**
 
-**Standard room slugs** (create only when content justifies them):
+- `ros2/lifecycle`
+- `ros2/nodes`
+- `ros2/anti-patterns`
+
+**Standard room slugs** when content justifies them:
 
 | Room | Purpose |
 |------|---------|
-| `architecture` | High-level design decisions, layer definitions |
-| `components` | Component contracts, interfaces, extension points |
-| `communication` | Message passing, API patterns, protocols |
-| `configuration` | Config files, parameters, environment setup |
-| `contracts` | Inter-component agreements, API guarantees |
+| `architecture` | High-level design decisions and boundaries |
+| `components` | Component interfaces and extension points |
+| `communication` | APIs, message flow, and protocols |
+| `configuration` | Parameters, environment, and config behavior |
+| `contracts` | Agreements between components |
 | `anti-patterns` | Confirmed mistakes to avoid |
-| `conventions` | Naming, style, tooling conventions |
-| `validation` | Testing rules, CI gates, quality checks |
-| `migration-notes` | Breaking changes, version upgrades, deprecation paths |
-| `incident-log` | Specific incidents: symptoms, diagnosis, root cause, fix, prevention |
-| `debugging` | Diagnostic commands, debug patterns, investigation workflows |
-| `observability` | Logging, metrics, tracing, runtime visibility expectations |
-| `failure-modes` | Known failure classes: triggers, symptoms, recovery strategy |
+| `conventions` | Naming, style, and tooling conventions |
+| `validation` | Testing rules and CI expectations |
+| `migration-notes` | Breaking changes and upgrade guidance |
+| `incident-log` | Specific incidents |
+| `debugging` | Repeatable investigation workflows |
+| `observability` | Logs, metrics, traces, and runtime visibility |
+| `failure-modes` | Recurring failure classes and recovery strategies |
 
-Start with `architecture` and `anti-patterns`. Add rooms only when content justifies them. Do not preallocate empty rooms.
-
-Keep room boundaries explicit: `incident-log` records a specific event that happened; `failure-modes` generalizes recurring classes of failure; `debugging` captures how to investigate; `observability` captures how to make investigation possible earlier.
+Start with `architecture` and `anti-patterns`. Add more rooms only when real content justifies them.
 
 ### Entries
 
-An entry is a single memory item within a room. It is the atomic unit of memory.
+An entry is the atomic unit of durable memory.
 
-Every entry should have:
-- **Type** — what kind of information it represents (see below)
-- **Content** — the actual information, written in clear, direct language
-- **`created_at`** — when the entry was first written
-- **`status`** — `draft`, `active`, `under_review`, or `deprecated`
-- **`verified_at`** (optional) — when the entry was last confirmed accurate
+Each entry should include:
 
-One entry, one rule. If an entry requires two distinct headings to organize its content, it is likely two entries.
+- **Type**
+- **Content**
+- **`created_at`**
+- **`status`**
+- **`verified_at`** when relevant
 
-### Entry Types
+One entry should contain one durable rule or fact.
 
-| Type | Description | Typical Weight |
-|------|-------------|----------------|
-| `invariant` | A rule or constraint that must never be violated | Highest |
-| `decision` | An architectural or design choice with rationale | High |
-| `pattern` | A recurring solution or approach to a class of problem | Medium |
-| `note` | Contextual or supplementary information | Low |
-| `deprecated` | Superseded content retained for traceability | Not surfaced by default |
+### Entry types
 
-Type determines how an agent treats the entry during retrieval. An agent must not override an `invariant` without explicit human instruction. A `note` may be deprioritized when context space is constrained.
+| Type | Description | Weight |
+|------|-------------|--------|
+| `invariant` | A rule that must not be violated | Highest |
+| `decision` | A deliberate design or architecture choice | High |
+| `pattern` | A reusable approach to a class of problem | Medium |
+| `note` | Supplementary context | Low |
 
-**Finer-grained labels.** The five types above are the primary taxonomy. Within an entry's content, a secondary label may clarify intent when useful:
+`deprecated` is not a type. It is a **status**.
 
+Optional labels can add precision for humans:
+
+```text
+[label: architecture-rule]
+[label: component-contract]
+[label: anti-pattern]
+[label: code-convention]
+[label: reusable-pattern]
+[label: migration-note]
 ```
-[label: architecture-rule]    # usually an invariant or decision
-[label: component-contract]   # usually a decision
-[label: anti-pattern]         # usually an invariant ("must not")
-[label: code-convention]      # usually a pattern
-[label: reusable-pattern]     # usually a pattern
-[label: migration-note]       # usually a note or decision
-```
 
-Labels are optional and do not replace the primary type. Retrieval and weighting are driven by the primary type; labels exist for human clarity.
+Labels do not replace the primary type.
 
-### Hierarchy Summary
+### Hierarchy summary
 
-```
+```text
 wing/
   room/
-    entry (type: invariant | decision | pattern | note | deprecated)
+    entry (type: invariant | decision | pattern | note, status: draft | active | under_review | deprecated)
 ```
 
-Every entry has a complete address: `wing/room/entry-id`. This address is stable and referenceable across sessions.
+Every entry should have a stable address such as `wing/room/entry-id`.
 
 ---
 
-## 5. Scope Separation
+## 5. Scope separation
 
-The most important structural decision is how to split scope between wings.
+The main design decision is where to draw scope boundaries.
 
-**Rule: separate by scope, not by workspace.**
+**Rule: separate by scope, not by workspace layout.**
 
-In practice, most setups land on two wings:
+Many teams end up with two main wings:
 
-| Wing | Scope | What goes here |
-|------|-------|----------------|
-| `<project_name>` | Project-specific | Architecture decisions, component contracts, local conventions, project-specific anti-patterns |
-| `<technology>` or `shared` | Shared / transverse | General platform or framework knowledge — reusable across projects |
+| Wing | Scope | Typical contents |
+|------|-------|------------------|
+| `<project_name>` | Project-specific | Local decisions, contracts, overrides, anti-patterns |
+| `<technology>` or `shared` | Reusable knowledge | Framework or platform knowledge used across projects |
 
-**Example:** a team building `lifecore_ros2` might use a `lifecore_ros2` wing for project-specific rules and a `ros2` wing for general ROS 2 knowledge. A web team might use `myapp` and `react`.
-
-**The rule:** if knowledge is reusable across projects, it belongs in the shared wing, not the project wing.
-
-Violating this rule creates the "Project Island" problem: shared knowledge gets duplicated across project wings, diverges over time, and must be maintained in multiple places. When you find yourself copying a rule from one project wing into another, that is the signal to move it to the shared wing.
+If knowledge is reusable across projects, it belongs in the shared wing.
 
 ---
 
-## 6. Retrieval Model
+## 6. Retrieval model
 
-When an agent gathers context before making a decision or change, it should query memory in this order:
+Agents should gather context in this order:
 
+```text
+1. Project wing
+2. Shared wing
+3. Local docs
+4. Code search
 ```
-1. Project wing  →  project-specific rules take precedence
-2. Shared wing   →  shared knowledge fills in what the project wing lacks
-3. Local docs    →  README, architecture files, inline comments
-4. Code search   →  grep / symbol search as last resort
-```
 
-Entries from both wings are merged into a single context. The agent then reasons from that merged context.
+Within retrieved memory, apply:
 
-**Within-type ordering** (after scope is resolved):
+1. `invariant`
+2. `decision`
+3. `pattern`
+4. `note`
 
-1. `invariant` — applied unconditionally
-2. `decision` — scoped to the active wing and room
-3. `pattern` — matched to the current task
-4. `note` — supplementary context, used last
-
-Entries marked `deprecated` are not surfaced unless explicitly requested.
-
-**Practical pattern for instruction files:**
-
-```markdown
-## Context Gathering
-
-1. Query the project wing for project-specific rules.
-2. Query the shared wing for general knowledge.
-3. Merge results. Project rules override shared rules only when explicitly marked.
-4. If the memory backend is unavailable, fall back to in-repo architecture docs, then README, then workspace search.
-```
+Entries with `status: deprecated` stay out of default retrieval.
 
 ---
 
-## 7. Conflict Handling
+## 7. Conflict handling
 
-When a project wing entry and a shared wing entry address the same topic, the project entry takes precedence — but only when it is explicitly documented as a local override.
+If a project entry and a shared entry cover the same topic, the project entry only wins when it is explicitly documented as a local override.
 
-A project entry that simply contradicts a shared rule without explanation should be treated as a potential inconsistency, not a silent override. Agents should flag this for human review rather than resolving it independently.
+Without that marker, the conflict should be treated as a review issue, not resolved silently.
 
-**Example of an explicit override:**
+**Example:**
 
-```
+```text
 type: decision
 label: local-override
 status: active
 
 This project does not follow the shared `ros2/lifecycle` activation sequence
 because the hardware driver requires a custom initialization step before
-activate() can succeed. See ticket LIFECORE-42 for context.
+activate() can succeed.
 ```
-
-Without a statement like this, conflicting entries are a warning sign, not a precedence rule.
 
 ---
 
-## 8. Persistence Rules
+## 8. Persistence rules
 
 ### What to persist
 
-Store entries that are:
-- **Durable** — will remain relevant beyond the current session
-- **Repeatable** — you will want this rule enforced again in the future
-- **Non-obvious** — not trivially inferred from reading the code
+Persist entries that are:
 
-Good candidates: architecture decisions with rationale, inter-component contracts, confirmed anti-patterns, conventions that differ from tool defaults, rules that prevent known regressions.
+- durable
+- repeatable
+- non-obvious
+
+Good examples include architecture decisions, component contracts, anti-patterns tied to real failures, and conventions that differ from defaults.
 
 ### What not to persist
 
-Do not store: debugging steps for a specific one-off issue, temporary session results, information already present verbatim in docstrings, one-time fixes with no recurring relevance, speculative ideas not yet validated.
+Do not persist:
 
-The test: *if this knowledge were lost tomorrow, would we reconstruct it and write it the same way?* If yes, persist. If no, skip.
+- one-off debugging notes
+- temporary session context
+- information already captured verbatim in code docs
+- speculative rules that are not yet validated
 
 ### Deduplication
 
-Before writing a new entry, search the target wing and room for semantically similar content.
+Before adding a new entry, search the target wing and room first.
 
-- If an existing entry covers the same information: **enrich** the existing entry rather than creating a new one.
-- If the new entry supersedes an older one: mark the old entry `status: deprecated` with a reference to its replacement.
-- Never create two entries with the same core rule in different phrasings.
-- When enriching an existing entry, preserve its original rule and extend it — do not rewrite from scratch.
+- if an entry already covers the rule, enrich it
+- if the new entry replaces an old one, mark the old one `deprecated`
+- do not create duplicates with slightly different wording
 
-Teams that want a more structured signal can use similarity scores as guidance (not enforcement). Scoped comparison within the target wing and room keeps the signal relevant:
+Similarity thresholds can help:
 
 | Similarity | Signal | Suggested action |
 |-----------|--------|-----------------|
-| ≥ 0.86 | Near-duplicate | Enrich the existing entry; do not create a new one |
-| 0.55 – 0.85 | Related content | Review manually; create only if the new entry captures a genuinely distinct rule |
-| < 0.55 | Likely distinct | Creating a new entry is acceptable if persistence criteria are met |
+| >= 0.86 | Near-duplicate | Enrich the existing entry |
+| 0.55 - 0.85 | Possibly overlapping | Review manually |
+| < 0.55 | Likely distinct | A new entry may be justified |
 
-**Type-aware exception:** two entries that are similar in content but differ in type (e.g., `architecture-rule` vs. `anti-pattern`) should remain separate. Different types serve different purposes.
-
-These thresholds are a refinement on top of disciplined writing — not a replacement for human judgment. See [deduplication.md](deduplication.md) for a compact reference.
+Type still matters. Similar content can still belong in separate entries if the types differ.
 
 ### Freshness metadata
 
-For entries that may evolve, include a metadata header:
+For entries that may drift:
 
-```
+```text
 status: active
 created_at: YYYY-MM-DD
 verified_at: YYYY-MM-DD   (optional)
 version: N                (optional)
 ```
 
-Set `status: under_review` when the surrounding codebase has changed significantly but the entry has not been re-verified. Stale memory is worse than no memory.
+Use `status: under_review` when the surrounding system has changed and the entry has not been re-checked.
 
 ### Cross-references
 
-When a project entry depends on shared knowledge, reference it rather than copying it:
+If a project entry depends on a shared rule, reference it instead of copying it:
 
+```text
+[see: ros2/lifecycle] — this component extends the state machine described there
 ```
-[see: ros2/lifecycle] — this component extends the native state machine described there
-```
-
-This keeps project entries lean and makes the dependency explicit.
 
 ---
 
-## 9. Graceful Degradation
+## 9. Graceful degradation
 
-Memory unavailability must never block a task.
+Memory should help work continue, not block it.
 
-When memory tools are not accessible, agents must continue with local sources — not halt, not error, not ask for intervention. Design your instruction files so the fallback chain is explicit:
+If the memory backend is unavailable:
 
+```text
+memory backend -> in-repo architecture docs -> README -> workspace search
 ```
-memory backend → in-repo architecture docs → README → workspace search
-```
-
-An agent that refuses to work because its memory backend is down has turned memory into a single point of failure. That is a design defect, not a safety measure.
 
 ---
 
-## 10. Practical Starting Point
+## 10. Practical starting point
 
-You do not need to implement this fully on day one.
+You do not need a large memory system on day one.
 
-A minimal setup that covers the highest-value cases:
-- **1 project wing** — for the current project
-- **1 shared wing** — for reusable platform or framework knowledge
-- **2 rooms** — `architecture` and `anti-patterns`
+A simple starting point is often enough:
 
-Add rooms only when content justifies them. Refine the scope split only when you notice mis-scoping patterns. The structure is a tool, not a goal.
+- one project wing
+- one shared wing
+- two rooms: `architecture` and `anti-patterns`
 
-**Example: a ROS 2 project**
-
-A team building `lifecore_ros2` sets up:
-
-- Wing `lifecore_ros2`, room `architecture`:
-  ```
-  type: invariant
-  label: architecture-rule
-  status: active
-  created_at: 2025-03-01
-
-  Topic components must gate all message processing and publication on the node's
-  activation state. Subscribers must check node state before forwarding messages.
-  Publishers must only publish when the node is in the ACTIVE state.
-
-  Rationale: prevents message processing during partial initialization or cleanup.
-
-  [see: ros2/lifecycle] for the state machine this rule extends.
-  ```
-
-- Wing `ros2`, room `lifecycle`:
-  ```
-  type: decision
-  label: shared-knowledge
-  status: active
-  created_at: 2025-01-15
-
-  ROS 2 lifecycle nodes follow a standard state machine: Unconfigured → Inactive →
-  Active → Finalized. Transitions are triggered by configure(), activate(), deactivate(),
-  cleanup(), shutdown(). Do not introduce internal states that shadow or diverge from
-  this machine.
-  ```
-
-The project rule extends the shared rule. The shared rule stays in the shared wing. No copying.
-
-A Copilot instruction file then says:
-
-> Before modifying any component lifecycle code, query `lifecore_ros2` then `ros2`. Merge results. Project rules take precedence only when marked as local overrides.
-
-That is the full loop. No manual re-explanation required per session.
+Add structure only when real usage justifies it.
 
 ---
 
-## 11. Relationship to Other Docs
+## 11. Relationship to other docs
 
 | Document | What it covers |
-|----------|---------------|
-| [retrieval.md](retrieval.md) | Detailed retrieval ordering, scoping, filtering, and context window handling |
-| [persistence.md](persistence.md) | Durability expectations, storage backend requirements, human readability |
-| [deduplication.md](deduplication.md) | Compact reference for the deduplication policy |
-| [anti_patterns.md](anti_patterns.md) | Memory design failures and how to fix them |
-| [maintenance.md](maintenance.md) | Keeping memory healthy over time: drift, review cycles, supersession |
-| [principles/rules.md](../principles/rules.md) | Behavioral rules for agents using memory |
-| [principles/invariants.md](../principles/invariants.md) | Invariant scope and governance |
-| [templates/](../templates/) | Entry and agent instruction templates |
-| [examples/](../examples/) | Concrete worked examples |
+|----------|----------------|
+| [retrieval.md](retrieval.md) | Retrieval ordering, scoping, filtering, and context pressure |
+| [persistence.md](persistence.md) | Durability expectations and storage requirements |
+| [deduplication.md](deduplication.md) | How to prevent duplicate or drifting entries |

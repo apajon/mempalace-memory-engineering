@@ -1,63 +1,69 @@
 # Retrieval: Order, Scope, and Priority
 
-Retrieval is not search. Retrieval is a structured process by which an agent assembles relevant context from memory before producing output or making a decision. This document defines how retrieval should be ordered and scoped.
+Retrieval is not just search. It is how an agent assembles the right memory before it answers a question, makes a change, or takes a decision.
 
 ---
 
-## Retrieval Order
+## Retrieval order
 
-When an agent retrieves memory for a given task, entries should be applied in this order:
+Apply entries in this order:
 
-1. **Invariants** — Retrieved and applied unconditionally, regardless of task context. These represent constraints the agent must never violate.
-2. **Decisions** — Scoped to the active wing and room. Applied after invariants to provide context-specific direction.
-3. **Patterns** — Matched to the current task or problem class. Applied after decisions to provide reusable approaches.
-4. **Notes** — Supplementary context. Applied last and deprioritized when context space is limited.
+1. **Invariants** — hard constraints
+2. **Decisions** — current design direction
+3. **Patterns** — reusable ways of solving the problem
+4. **Notes** — supporting context
 
-`deprecated` entries are excluded from retrieval unless explicitly requested by the user or agent instruction.
-
-This ordering ensures that high-priority constraints are never overridden by lower-priority contextual notes.
+Entries with `status: deprecated` stay out of default retrieval unless explicitly requested.
 
 ---
 
 ## Scope
 
-Retrieval is scoped to the **active wing** by default.
+Retrieval is scoped to the active wing by default.
 
-An agent working on a ROS 2 task operates in the `ros2` wing. It retrieves entries from that wing without loading unrelated wings. This prevents context pollution and ensures that agent behavior is predictable within a domain.
+If an agent is working on a ROS 2 task, it should start with the `ros2` wing rather than searching across unrelated memory.
 
-Cross-wing retrieval is allowed but must be **explicit**. Agent instructions or user prompts that reference another wing cause retrieval to extend to that wing. This should be reflected in agent instructions (see `templates/agent_instructions_template.md`).
+Cross-wing retrieval is allowed, but it should be explicit.
 
 ---
 
 ## Filtering
 
-Within a wing, retrieval may be further scoped:
+Within a wing, retrieval can be narrowed:
 
-- **By room** — Retrieve only entries from a specific room when the task is tightly scoped.
-- **By type** — Retrieve only invariants, or only decisions, when the agent is performing a specific reasoning task.
-- **By status** — Only `active` entries are included in default retrieval. Entries with status `under_review` may be included with a note that they are unconfirmed.
+- **By room**
+- **By type**
+- **By status**
 
----
-
-## Context Window Considerations
-
-Retrieved entries consume context window space. When memory volume is high:
-
-- Invariants are always included.
-- Decisions are included in full.
-- Patterns are summarized or truncated if needed.
-- Notes are included only if directly relevant to the current task.
-
-Agent instructions should specify how to handle context pressure explicitly rather than relying on implicit truncation behavior.
+Default retrieval should focus on `active` entries and include `under_review` entries only when their uncertainty is made clear.
 
 ---
 
-## Retrieval Failures
+## Context window pressure
 
-Retrieval failures occur when:
+Retrieved memory uses context space, so degradation should be deliberate.
 
-- The agent draws on an entry that does not exist (hallucination of memory)
-- The agent ignores a relevant entry that does exist
-- The agent applies an entry outside its intended scope
+When context gets tight:
 
-These failures are symptoms of poor memory design, not retrieval system bugs. Fixing them requires reviewing entry types, scope assignments, and agent instructions — not just re-running retrieval.
+- keep invariants first
+- keep decisions in full
+- summarize patterns if needed
+- include notes only when directly relevant
+
+---
+
+## Retrieval failures
+
+Retrieval usually fails in one of three ways:
+
+- the agent uses an entry that does not exist
+- the agent ignores an entry that does exist
+- the agent applies an entry outside its scope
+
+When that happens, the fix is usually to review:
+
+- entry types
+- scope assignment
+- room placement
+- status accuracy
+- instruction-file behavior

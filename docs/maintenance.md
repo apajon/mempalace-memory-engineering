@@ -1,73 +1,75 @@
 # Maintenance: Memory Lifecycle and Upkeep
 
-Memory that is written and never revisited becomes unreliable. This document describes the lifecycle of a memory entry and the maintenance practices that keep memory useful over time.
+Memory that is written once and never reviewed becomes unreliable. This document describes the lifecycle of an entry and the work that keeps memory useful over time.
 
 ---
 
-## Entry Lifecycle
+## Entry lifecycle
 
-```
-draft → active → under_review → active (updated)
-                              ↘ deprecated
+```text
+draft -> active -> under_review -> active (updated)
+                           \
+                            -> deprecated
 ```
 
 | Status | Meaning |
 |--------|---------|
-| `draft` | Entry is being written; not yet in standard retrieval |
-| `active` | Entry is current, verified, and available for retrieval |
-| `under_review` | Entry may be stale or contested; flagged for human review |
-| `deprecated` | Entry has been superseded or invalidated; excluded from standard retrieval |
+| `draft` | Being written or reviewed; not part of standard retrieval |
+| `active` | Current and available for retrieval |
+| `under_review` | Possibly stale; needs confirmation |
+| `deprecated` | Superseded or invalidated; excluded from default retrieval |
 
-Entries should move through this lifecycle explicitly. An entry should never become `deprecated` by being silently removed. The reason for deprecation and any replacement entry should be noted.
+Lifecycle transitions should be explicit.
 
 ---
 
-## Maintenance Schedule
+## Maintenance schedule
 
-Maintenance activities should be scheduled, not only reactive.
+### Weekly for active projects
 
-### Weekly (Active Projects)
-
-- Review entries added in the past week for clarity and type correctness
-- Identify any entries that should have triggered a supersession event but did not
+- review new entries for clarity and type correctness
+- check whether recent changes should have triggered supersession
 
 ### Monthly
 
-- Run deduplication review across all active wings (see `docs/deduplication.md`)
-- Check for entries with `verified_at` dates older than 60 days; flag as `under_review`
-- Review `under_review` entries and either update or deprecate them
+- run a deduplication pass across active wings
+- review old `verified_at` dates and mark uncertain entries `under_review`
+- resolve `under_review` entries by updating or deprecating them
 
-### On Significant System Changes
+### On significant system changes
 
-- Audit the wing most affected by the change
-- Mark entries that may be affected as `under_review`
-- Update or deprecate after confirming impact
+- audit the most affected wing
+- mark potentially stale entries `under_review`
+- update or deprecate them after confirming impact
 
-### Before Starting a New Agent Session
+### Before starting a new agent session
 
-- Confirm that invariants in the relevant wing are current
-- Resolve any `under_review` entries that affect the session's scope
-- Remove or deprecate entries that were known to be temporary
+- confirm that relevant invariants are still current
+- check whether unresolved `under_review` entries affect the session
+- remove or deprecate entries that were only meant to be temporary
 
 ---
 
 ## Ownership
 
-Each wing should have a designated owner — a person responsible for reviewing and approving changes to entries in that wing. Ownership is not exclusive authorship; it is accountability for quality.
+Each wing should have a human owner responsible for review quality.
 
-Wing owners are responsible for:
-- Approving new `invariant` and `decision` entries
-- Conducting monthly maintenance reviews
-- Resolving conflicts when entries contradict each other
+That usually includes:
+
+- approving new `invariant` and `decision` entries
+- leading maintenance reviews
+- resolving contradictions between entries
 
 ---
 
-## Signs That Maintenance Is Needed
+## Signs maintenance is needed
 
-- An agent produces inconsistent behavior across sessions for the same task
-- A human engineer is surprised by an agent's behavior and traces it to an outdated entry
-- The same concept appears in multiple entries with different content
-- Several entries have `verified_at` dates more than 90 days old
-- A wing has grown to more than 100 entries without any recent deprecations
+Maintenance is probably overdue when:
 
-These are signals, not thresholds. Use judgment. A wing with 200 carefully maintained entries is healthier than a wing with 30 entries that have never been reviewed.
+- the same task produces inconsistent agent behavior across sessions
+- a human traces a bad decision to stale memory
+- the same concept appears in multiple conflicting entries
+- many entries have not been verified for a long time
+- a wing keeps growing without cleanup or deprecation
+
+These are signals, not rigid thresholds.

@@ -1,66 +1,78 @@
 # Persistence: Durability and Ownership of Memory
 
-Memory entries are artifacts. They should be treated with the same care as source code, configuration files, or design documents. This document defines expectations for how memory persists and what makes persistence reliable.
+Memory entries are artifacts. They should be treated with the same care as code, configuration, and architecture documents.
 
 ---
 
-## Core Principle
+## Core principle
 
-Memory must survive:
+Memory should survive:
 
-- Agent session restarts
-- Model changes or upgrades
-- Tooling changes (editor, IDE, MCP client)
-- Team membership changes
+- agent restarts
+- model upgrades or replacements
+- tooling changes
+- team changes over time
 
-If memory exists only in a session or in the context window of a running agent, it is not persisted memory — it is ephemeral state. Ephemeral state should not be treated as memory.
-
----
-
-## What Must Be Persisted
-
-The following entry types must always be persisted to durable storage:
-
-- **Invariants** — These define the constraints of the system. Loss of an invariant means an agent may operate without knowing a rule exists.
-- **Decisions** — These record why the system is the way it is. Loss of a decision means rationale disappears, making future decisions less informed.
-- **Patterns** — These encode accumulated engineering knowledge. They are worth persisting because they represent repeated validation.
-
-Notes may be persisted but are lower priority. Temporary notes that are session-scoped should be explicitly labeled as such and not stored in wings intended for durable memory.
+If knowledge only exists in a live session or in an agent's current context window, it is temporary state, not persisted memory.
 
 ---
 
-## Storage Backend
+## What must be persisted
 
-Persistence mechanics — writing, reading, and indexing entries — are handled by the storage backend. If using MemPalace, the backend manages file-level persistence and MCP-accessible retrieval.
+The following types are worth storing durably:
 
-This repository does not prescribe a specific backend. The methodology is backend-agnostic. What matters is that:
+- **Invariants** — because losing a system constraint changes agent behavior
+- **Decisions** — because design rationale disappears quickly if not recorded
+- **Patterns** — because repeated engineering knowledge is expensive to rediscover
 
-- The backend stores entries in a format that is human-readable outside the agent context
-- The backend preserves entry metadata (type, dates, status)
-- The backend is not the agent's context window
-
----
-
-## Version History
-
-Entries that define system behavior should carry version history or at minimum a `created_at` and `verified_at` timestamp. When an entry is updated substantially, the previous version should be accessible, either through the backend's versioning support or by maintaining the deprecated original entry.
-
-This is not a requirement for all entries. Notes and low-weight patterns do not require version history. Invariants and decisions do.
+Notes may also be persisted, but only when they are durable enough to matter later.
 
 ---
 
-## Human Readability
+## Storage backend
 
-Memory entries must be readable by a human without using an agent. If an entry is only interpretable by an AI, it is not truly persisted — it is opaque state. Entries should be written in clear, direct language that a human engineer can understand and verify.
+The backend handles mechanics such as writing, indexing, and retrieving entries.
 
-This requirement serves two purposes:
-1. It allows humans to audit and correct memory.
-2. It forces entries to be well-formed enough that an AI will also interpret them correctly.
+This repository does not require a specific backend. It does require a few practical properties:
+
+- entries remain readable outside the agent runtime
+- metadata is preserved
+- stored memory is not confused with transient session context
 
 ---
 
-## Persistence Anti-Patterns
+## Version history
 
-- **Session-only memory** — Memory that only exists in a running agent's context window is not persistent. Do not rely on it across sessions.
-- **Implicit memory** — Memory that exists only because an agent "remembers" it from previous interactions, without being written to a backend, is not persistent.
-- **Unverified persistence** — Assuming an entry was saved without confirming it exists in the backend is a common source of lost memory.
+Entries that shape system behavior should keep enough history to explain what changed.
+
+At minimum, important entries should carry `created_at` and usually `verified_at`.
+
+When an entry changes substantially, the previous version should remain available through:
+
+- backend version history
+- or an explicit deprecated entry retained for traceability
+
+Invariants and decisions benefit most from this.
+
+---
+
+## Human readability
+
+Persisted memory must remain understandable to a human without requiring an agent to interpret it.
+
+That matters because:
+
+1. humans need to audit and correct stored memory
+2. clear writing also improves machine retrieval
+
+If an entry is opaque to a human reviewer, it is not good durable memory.
+
+---
+
+## Persistence anti-patterns
+
+- **Session-only memory** — useful in the moment, but not durable
+- **Implicit memory** — something the agent "remembers" without a stored record
+- **Unverified persistence** — assuming an entry was stored without confirming it exists
+
+If the knowledge must matter later, make sure it is actually written to durable storage and can be found again.
