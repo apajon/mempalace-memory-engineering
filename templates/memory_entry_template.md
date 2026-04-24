@@ -15,7 +15,7 @@ Conventions used throughout:
   `supersedes`, `superseded_by`.
 - Status vocabulary: `draft`, `active`, `under_review`, `deprecated`.
 - Agents may only create entries with `status: draft`. Activation requires
-  human approval (see [principles/rules.md § R5](../principles/rules.md)).
+  human approval.
 
 Entry IDs should be lowercase, hyphen-separated, and descriptive enough to be
 recognizable without reading the full content (e.g. `no-blocking-callbacks`,
@@ -290,4 +290,4 @@ Preventive measures:
 - **Supersession is explicit.** When replacing an entry, set
   `status: deprecated` on the old one and populate `superseded_by`. Silent
   deletion is not permitted — see
-  [principles/rules.md § R14](../principles/rules.md).
+  [principles/rules.md § 6](../principles/rules.md#6-when-to-mark-obsolete).

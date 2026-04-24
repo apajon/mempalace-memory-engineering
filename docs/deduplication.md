@@ -117,7 +117,7 @@ When enriching, preserve the original `created_at` date. Update `verified_at` to
 
 Enrichment does not mean overwriting. When updating an existing entry:
 
-- **Do not weaken an invariant** without human approval. Softening "must not" to "should avoid" is a substantive modification, not a clarification — treat it as a supersession, subject to rules R5, R13, and R14 in `principles/rules.md`.
+- **Do not weaken an invariant** without human approval. Softening "must not" to "should avoid" is a substantive modification, not a clarification — treat it as a supersession, subject to [`principles/rules.md § 6`](../principles/rules.md#6-when-to-mark-obsolete) and [`principles/invariants.md § I7`](../principles/invariants.md#i7--obsolete-memory-is-maintenance-debt).
 - **Do not expand the scope** of an entry beyond its original intent. If the original entry applies to one room and the new content applies more broadly, draft a separate entry rather than silently widening the existing one.
 - **Do not merge types.** If an invariant and a decision cover related content, enriching one with content from the other conflates their roles in the retrieval hierarchy.
 - **Reference supersession explicitly.** If the enrichment effectively replaces a key claim in the original, mark the old version's claim as superseded within the entry rather than silently erasing it.
@@ -130,7 +130,7 @@ These constraints apply to agent-authored enrichments and human-authored ones eq
 
 An entry becomes obsolete when the system it describes no longer exists, the constraint it encodes has been removed, or the decision it records has been reversed.
 
-Obsolete entries are **not deleted.** They are **deprecated with a reference to what replaced them or why they no longer apply.** This is rule R14 in `principles/rules.md` and is non-negotiable.
+Obsolete entries are **not deleted.** They are **deprecated with a reference to what replaced them or why they no longer apply.** This follows [`principles/rules.md § 6`](../principles/rules.md#6-when-to-mark-obsolete) and is non-negotiable.
 
 ### Deprecation workflow
 

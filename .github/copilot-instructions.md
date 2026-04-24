@@ -85,16 +85,19 @@ For multi-step tasks, state a brief plan:
   See [docs/retrieval.md](../docs/retrieval.md).
 - **Draft before activate**: Proposed entries start as `status: draft`. No entry becomes
   `active` without explicit human approval. This is non-negotiable for `invariant` and
-  `decision` entries. See [principles/rules.md](../principles/rules.md) rule R5.
+  `decision` entries.
 - **Metadata is required**: Every entry must include `type`, `status`, and `created_at`.
   Missing metadata is a defect, not an omission.
 - **Supersession is explicit**: Replaced entries are marked `deprecated` with a reference to
-  their replacement. Silent deletion is not permitted. See rule R14.
+  their replacement. Silent deletion is not permitted. See
+  [principles/rules.md § 6](../principles/rules.md#6-when-to-mark-obsolete) and
+  [principles/invariants.md § I7](../principles/invariants.md#i7--obsolete-memory-is-maintenance-debt).
 - **Scope invariants correctly**: A wing-scoped invariant does not apply globally. If a
   constraint must apply across all wings, flag it for placement in a `global` wing.
-  See [principles/invariants.md](../principles/invariants.md#invariant-scope).
+  See [principles/invariants.md § I1](../principles/invariants.md#i1--memory-is-scoped-before-it-is-retrieved).
 - **No duplication**: Before drafting a new entry, check for existing coverage. Propose an
-  update over a new entry if overlap exists. See rule R7.
+  update over a new entry if overlap exists. See
+  [principles/rules.md § 5](../principles/rules.md#5-when-to-enrich-instead-of-creating).
 
 ---
 
