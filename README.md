@@ -6,6 +6,10 @@
 
 > A practical guide to designing long-term memory for AI systems.
 
+Most AI memory fails because it is treated as a dump.
+
+This repository treats memory as an engineering artifact: scoped, typed, reviewed, deduplicated, and maintained.
+
 ---
 
 ## Why This Repository Exists
@@ -92,6 +96,23 @@ This is a methodology and reference repository for long-term memory in AI-assist
 - It is **not** a plugin or extension.
 - It is **not** a replacement for MemPalace.
 - It is **not** official MemPalace documentation.
+
+---
+
+## Start Here
+
+If you are new:
+
+1. Read [docs/architecture.md](docs/architecture.md) to understand the wing / room / entry model.
+2. Copy [templates/agent_instructions_template.md](templates/agent_instructions_template.md) as a starting point for agent behavior.
+3. Read [examples/basic_two_wing_model.md](examples/basic_two_wing_model.md) to see the model used in practice.
+4. Add deduplication rules from [docs/deduplication.md](docs/deduplication.md) once memory starts growing.
+
+If you already know the model:
+
+- Read [docs/retrieval.md](docs/retrieval.md) for retrieval order, fallback behavior, and context-window strategy.
+- Read [principles/rules.md](principles/rules.md) for operational authoring rules.
+- Use [templates/memory_entry_template.md](templates/memory_entry_template.md) when drafting durable entries.
 
 ---
 
